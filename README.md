@@ -1,6 +1,6 @@
 # Helium - A Distributed Key Value Store 
 
-Helium is a Distributed Key Value store. This is a Course project which I made while taking [Distributed Systems] (http://courses.engr.illinois.edu/cs425/fa2013/) course. The purpose of this project is to learn Distributed Systems in a Hands On way. 
+Helium is a Distributed Key Value store. This is a Course project which I developed while taking [Distributed Systems] (http://courses.engr.illinois.edu/cs425/fa2013/) course. The purpose of this project is to learn Distributed Systems in a Hands On way. 
 
 Following are the salient features of the Helium 
  - A [Gossip based membership protocol] (http://en.wikipedia.org/wiki/Gossip_protocol) to keep track of Alive Hosts
@@ -31,11 +31,11 @@ Following figure shows how keys are distributed among coordinator and replicas -
  - C1 runs a background thread to execute QUORUM/ONE requests on its replicas asynchronously
 
 ## Handling Node Failures and Joins
-  - Helium Servers use a gossip based membership protocol. This way they are aware of what Key Value Servers are part of the system.
-  - Helium Sever serves two roles – coordinator and Replica. These two roles need to be taken over by some other Helium Server if this Helium Server fails. Similarly if a new node joins, it takes on the roles of coordinator and replica.
-  - Re-replication ensures that there are always 3 copies of a key even after node failures. 
+  - Helium Servers use a gossip based membership protocol. This way they are aware of what Key Value Servers are part of the system
+  - Helium Sever serves two roles – coordinator and Replica. These two roles need to be taken over by some other Helium Server if this Helium Server fails. Similarly if a new node joins, it takes on the roles of coordinator and Re-replication ensures that there are always 3 copies of a key even after node failures.
 
-  Following figure shows a scenario when a machine C1 fails and the actions taken by other machines
+
+Following figure shows a scenario when a machine C1 fails and the actions taken by other machines
 ![alt tag](https://lh4.googleusercontent.com/-mgiFawdM2hA/UrsqCSTXxiI/AAAAAAAABik/FQyr5EZ6OH8/s616/MP4-1.png)
 
   - C1 fails
@@ -43,7 +43,8 @@ Following figure shows how keys are distributed among coordinator and replicas -
   - C3 detects that C1 was in its replica group. C3 selects C2 as a new replica and copies K3 to C2
   - C2 detects that its predecessor C1 has died. For C1’s keys K1, it becomes coordinator and replicates K1 to new replica C4
 
-  Following figure shows a scenario when a new machine C5 joins and the actions taken by other machines
+
+Following figure shows a scenario when a new machine C5 joins and the actions taken by other machines
   ![alt tag](https://lh4.googleusercontent.com/-dfQgnviDNbY/UrsqDHv0hnI/AAAAAAAABi4/vW5AN_ftMVQ/s610/MP4-2.png)
 
   - C5 joins
@@ -52,6 +53,7 @@ Following figure shows how keys are distributed among coordinator and replicas -
   - C2 detects that its C5 is the new predecessor. For C2’s keys K1, C5 becomes new coordinator. C2 sends K2 to C5 and deletes K2 from C4
 
 ## Concurrency
+
   - If the consistency level is ONE, coordinator processes that request locally
   - If the consistency level is ALL, coordinator processes that request locally as well as on both its replicas
   - If the consistency level is QUORUM, coordinator processes that request locally and its first replica
@@ -59,6 +61,7 @@ Following figure shows how keys are distributed among coordinator and replicas -
   - coordinator runs a background thread which applies the updates corresponding to ONE and QUORUM requests on the replicas asynchronously. This guarantees eventual consistency and ensures that Last Writer Wins (LWW) property holds
 
 ## Membership Protocol
+
  Each host runs a Failure Detector process. This implements a gossip based membership protocol which is used to keep track of live hosts in the system. Gossip based protocol is very scalable for large number of machines. For n nodes, each node needs to transmit only log(n) gossip messages. So this is a very bandwidth efficient and fault tolerant scheme.
  
 ## Distributed Grep
@@ -75,3 +78,93 @@ Following figure shows how keys are distributed among coordinator and replicas -
 Following diagram illustrates the steps involved in processing a Grep command. The numbers on arrows indicate the order of events.
 
 ![alt tag](https://lh3.googleusercontent.com/-8KbAUPgxRpM/UrsqCUV-3sI/AAAAAAAABis/PKUdIPbpZDM/s811/MP1-new.png)
+
+
+## Project Structure 
+
+### Directory Organization
+```
+Helium 			  - Base Directory  
+Helium/src		- Source Code  
+Helium/lib		- Jar files of the dependencies and helium.jar (containing class files for Helium project)  
+Helium/config	- Configuration Files  
+Helium/logs		- Log files  
+Helium/scripts 	- Scripts for starting the Key Value Server and Client  
+```
+
+### Requirements
+ - [JDK version 1.6 or higher] (http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html) 
+ - [Ant Build tool] (http://ant.apache.org/bindownload.cgi) 
+ 
+### Compiling the code
+The following instructions will work fine for any Linux distribution
+ - Change to Helium directory. It contains the ant build file build.xml
+
+```
+ 		$ cd Helium
+```
+ - Run the ant build tool
+
+```
+ 		$ ant
+```
+
+This will compile the source code and create the output jar file helium.jar in lib folder. 
+
+### Configuration
+config/app.config contains configuration parameters. Set the following parameters as per your test setup.
+
+  - Set node_count to number of machines that you are adding to Distributed System. Please note that there is a space before and after = sign.
+```
+      node_count = 3
+```
+
+  - For each node, set its IP Address e.g. 
+```
+    	 node.1.ip = 192.168.2.12
+```
+
+### Running the code
+scripts folder contains scripts for running the starting the HeliumServer and HeliumClient
+
+### HeliumServer
+ - Step 1 - Start the HeliumServer  
+
+```
+  	$ ./heliumserver.start.sh
+```
+This will start the HeliumServer and bring up a command line interface to interact with HeliumServer.
+ 	
+ - Step 2 - Use command "show" to see the keys stored on this HeliumServer and current Members of the group.
+ 			Use command "history" to see the last ten Read/Write commands 
+ 
+ 	
+### HeliumClient
+ 
+ - Step 1 - Start with HeliumClientc
+
+        $ ./heliumclient.start.sh
+
+ 	This will start the HeliumClient and bring up a command line interface to perform different operations
+ 	
+ - Step 2 - How to perform different operations
+
+    - To insert a key 5 and value USA with consistency level ONE  
+```    
+    insert 5 USA ONE
+```    
+
+    - To lookup a key with consistency level QUORUM  
+```    
+    lookup 5 QUORUM
+```    
+
+    - To update the value of key 5 from USA to United States with consistency level ALL  
+```    
+    update 5 USA "United States" ALL
+```
+
+    - To delete the key 5 with consistency level ALL  
+```
+    delete 5 ALL
+```
