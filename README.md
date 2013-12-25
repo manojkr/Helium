@@ -1,6 +1,6 @@
 # Helium - A Distributed Key Value Store 
 
-Helium is a Distributed Key Value store. This is a Course project which I made while taking [Distributed Systems] (http://courses.engr.illinois.edu/cs425/fa2013/) course. The purpose of this project is to learn Distributed Systems in a Hands On way. 
+Helium is a Distributed Key Value store. This is a Course project which I developed while taking [Distributed Systems] (http://courses.engr.illinois.edu/cs425/fa2013/) course. The purpose of this project is to learn Distributed Systems in a Hands On way. 
 
 Following are the salient features of the Helium 
  - A [Gossip based membership protocol] (http://en.wikipedia.org/wiki/Gossip_protocol) to keep track of Alive Hosts
@@ -78,3 +78,93 @@ Following figure shows a scenario when a new machine C5 joins and the actions ta
 Following diagram illustrates the steps involved in processing a Grep command. The numbers on arrows indicate the order of events.
 
 ![alt tag](https://lh3.googleusercontent.com/-8KbAUPgxRpM/UrsqCUV-3sI/AAAAAAAABis/PKUdIPbpZDM/s811/MP1-new.png)
+
+
+## Project Structure 
+
+### Directory Organization
+```
+Helium 			  - Base Directory  
+Helium/src		- Source Code  
+Helium/lib		- Jar files of the dependencies and helium.jar (containing class files for Helium project)  
+Helium/config	- Configuration Files  
+Helium/logs		- Log files  
+Helium/scripts 	- Scripts for starting the Key Value Server and Client  
+```
+
+### Requirements
+ - [JDK version 1.6 or higher] (http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html) 
+ - [Ant Build tool] (http://ant.apache.org/bindownload.cgi) 
+ 
+### Compiling the code
+The following instructions will work fine for any Linux distribution
+ - Change to Helium directory. It contains the ant build file build.xml
+
+```
+ 		$ cd Helium
+```
+ - Run the ant build tool
+
+```
+ 		$ ant
+```
+
+This will compile the source code and create the output jar file helium.jar in lib folder. 
+
+### Configuration
+config/app.config contains configuration parameters. Set the following parameters as per your test setup.
+
+  - Set node_count to number of machines that you are adding to Distributed System. Please note that there is a space before and after = sign.
+```
+      node_count = 3
+```
+
+  - For each node, set its IP Address e.g. 
+```
+    	 node.1.ip = 192.168.2.12
+```
+
+### Running the code
+scripts folder contains scripts for running the starting the HeliumServer and HeliumClient
+
+### HeliumServer
+ - Step 1 - Start the HeliumServer  
+
+```
+  	$ ./heliumserver.start.sh
+```
+This will start the HeliumServer and bring up a command line interface to interact with HeliumServer.
+ 	
+ - Step 2 - Use command "show" to see the keys stored on this HeliumServer and current Members of the group.
+ 			Use command "history" to see the last ten Read/Write commands 
+ 
+ 	
+### HeliumClient
+ 
+ - Step 1 - Start with HeliumClientc
+
+        $ ./heliumclient.start.sh
+
+ 	This will start the HeliumClient and bring up a command line interface to perform different operations
+ 	
+ - Step 2 - How to perform different operations
+
+    - To insert a key 5 and value USA with consistency level ONE  
+```    
+    insert 5 USA ONE
+```    
+
+    - To lookup a key with consistency level QUORUM  
+```    
+    lookup 5 QUORUM
+```    
+
+    - To update the value of key 5 from USA to United States with consistency level ALL  
+```    
+    update 5 USA "United States" ALL
+```
+
+    - To delete the key 5 with consistency level ALL  
+```
+    delete 5 ALL
+```
