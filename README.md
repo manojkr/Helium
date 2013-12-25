@@ -31,11 +31,11 @@ Following figure shows how keys are distributed among coordinator and replicas -
  - C1 runs a background thread to execute QUORUM/ONE requests on its replicas asynchronously
 
 ## Handling Node Failures and Joins
-  - Helium Servers use a gossip based membership protocol. This way they are aware of what Key Value Servers are part of the system.
-  - Helium Sever serves two roles – coordinator and Replica. These two roles need to be taken over by some other Helium Server if this Helium Server fails. Similarly if a new node joins, it takes on the roles of coordinator and replica.
-  - Re-replication ensures that there are always 3 copies of a key even after node failures. 
+  - Helium Servers use a gossip based membership protocol. This way they are aware of what Key Value Servers are part of the system
+  - Helium Sever serves two roles – coordinator and Replica. These two roles need to be taken over by some other Helium Server if this Helium Server fails. Similarly if a new node joins, it takes on the roles of coordinator and Re-replication ensures that there are always 3 copies of a key even after node failures.
 
-  Following figure shows a scenario when a machine C1 fails and the actions taken by other machines
+
+Following figure shows a scenario when a machine C1 fails and the actions taken by other machines
 ![alt tag](https://lh4.googleusercontent.com/-mgiFawdM2hA/UrsqCSTXxiI/AAAAAAAABik/FQyr5EZ6OH8/s616/MP4-1.png)
 
   - C1 fails
@@ -43,7 +43,8 @@ Following figure shows how keys are distributed among coordinator and replicas -
   - C3 detects that C1 was in its replica group. C3 selects C2 as a new replica and copies K3 to C2
   - C2 detects that its predecessor C1 has died. For C1’s keys K1, it becomes coordinator and replicates K1 to new replica C4
 
-  Following figure shows a scenario when a new machine C5 joins and the actions taken by other machines
+
+Following figure shows a scenario when a new machine C5 joins and the actions taken by other machines
   ![alt tag](https://lh4.googleusercontent.com/-dfQgnviDNbY/UrsqDHv0hnI/AAAAAAAABi4/vW5AN_ftMVQ/s610/MP4-2.png)
 
   - C5 joins
@@ -52,6 +53,7 @@ Following figure shows how keys are distributed among coordinator and replicas -
   - C2 detects that its C5 is the new predecessor. For C2’s keys K1, C5 becomes new coordinator. C2 sends K2 to C5 and deletes K2 from C4
 
 ## Concurrency
+
   - If the consistency level is ONE, coordinator processes that request locally
   - If the consistency level is ALL, coordinator processes that request locally as well as on both its replicas
   - If the consistency level is QUORUM, coordinator processes that request locally and its first replica
@@ -59,6 +61,7 @@ Following figure shows how keys are distributed among coordinator and replicas -
   - coordinator runs a background thread which applies the updates corresponding to ONE and QUORUM requests on the replicas asynchronously. This guarantees eventual consistency and ensures that Last Writer Wins (LWW) property holds
 
 ## Membership Protocol
+
  Each host runs a Failure Detector process. This implements a gossip based membership protocol which is used to keep track of live hosts in the system. Gossip based protocol is very scalable for large number of machines. For n nodes, each node needs to transmit only log(n) gossip messages. So this is a very bandwidth efficient and fault tolerant scheme.
  
 ## Distributed Grep
