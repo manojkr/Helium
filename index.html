@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
+    <title>Helium by manojkr</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>Helium</h1>
+        <h2>A Distributed Key Value Store</h2>
+
+        <section id="downloads">
+          <a href="https://github.com/manojkr/Helium/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/manojkr/Helium/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/manojkr/Helium" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>
+<a name="helium---a-distributed-key-value-store" class="anchor" href="#helium---a-distributed-key-value-store"><span class="octicon octicon-link"></span></a>Helium - A Distributed Key Value Store</h1>
+
+<p>Helium is a Distributed Key Value store. This is a Course project which I developed while taking <a href="http://courses.engr.illinois.edu/cs425/fa2013/">Distributed Systems</a> course. The purpose of this project is to learn Distributed Systems in a Hands On way. </p>
+
+<p>Following are the salient features of the Helium </p>
+
+<ul>
+<li>A <a href="http://en.wikipedia.org/wiki/Gossip_protocol">Gossip based membership protocol</a> to keep track of Alive Hosts</li>
+<li>Replication - Cassandra style passive replication on 3 machines to protect against failure tolerance</li>
+<li>Partitioning and Load Balancing - <a href="http://en.wikipedia.org/wiki/Consistent_hashing">Consistent Hashing</a>
+</li>
+<li>Concurrency - Support for ONE, QUORUM and ALL consistency levels</li>
+<li>A Distributed Grep tool to grep the logs of different Servers from a single machine for convenient debugging</li>
+</ul><h2>
+<a name="design" class="anchor" href="#design"><span class="octicon octicon-link"></span></a>Design</h2>
+
+<ul>
+<li>Each machine acting a Key Value Store will have HeliumServer process running. ConsistentHashing with SHA512 as hashing function is used to distribute keys among HeliumServers.</li>
+<li>Each key is assigned a HeliumServer as coordinator. HeliumServer that is clockwise successor of the key position on the ring acts as its Coordinator.</li>
+<li>All the requests(INSERT/UPDATE/DELETE) for a particular key are processed by coordinator for that key.</li>
+<li>With the help of Distributed Grep, logs of HeliumServers residing at different machines can be easily grepped to debug different issues/operations from a single host.</li>
+</ul><h2>
+<a name="replication" class="anchor" href="#replication"><span class="octicon octicon-link"></span></a>Replication</h2>
+
+<ul>
+<li>Coordinator replicates the keys for which it is responsible on its two clockwise successors. These two clock wise successors act as replicas for that key.</li>
+<li>Passive replication is used. Coordinator is responsible for replicating all the updates on the Key to the replicas.</li>
+<li>Since there are 3 copies of each key, System can tolerate upto 2 simultaneous failures. Figure below shows how keys are replicated among Coordinator and replicas.</li>
+</ul><p>Following figure shows how keys are distributed among coordinator and replicas - </p>
+
+<p><img src="https://lh4.googleusercontent.com/-2qZEWzRXTYI/UrsqESQ_UpI/AAAAAAAABi8/X9AYzEGiJ3c/s606/MP4.png" alt="alt tag"></p>
+
+<ul>
+<li>For key K1, C1 is the coordinator. Its two clockwise successors, C2 and C3 are replicas for the K1. Any Requests (INSERT/UPDATE/ DELETE) for K1 are received by C1. </li>
+<li>C1 executes the request locally and on C2 and C2 for ALL level. </li>
+<li>C1 executes the request only locally for ONE level.</li>
+<li>C1 executes the request locally and on C2 for QUORUM level. </li>
+<li>C1 runs a background thread to execute QUORUM/ONE requests on its replicas asynchronously</li>
+</ul><h2>
+<a name="handling-node-failures-and-joins" class="anchor" href="#handling-node-failures-and-joins"><span class="octicon octicon-link"></span></a>Handling Node Failures and Joins</h2>
+
+<ul>
+<li>Helium Servers use a gossip based membership protocol. This way they are aware of what Key Value Servers are part of the system</li>
+<li>Helium Sever serves two roles – coordinator and Replica. These two roles need to be taken over by some other Helium Server if this Helium Server fails. Similarly if a new node joins, it takes on the roles of coordinator and Re-replication ensures that there are always 3 copies of a key even after node failures.</li>
+</ul><p>Following figure shows a scenario when a machine C1 fails and the actions taken by other machines
+<img src="https://lh4.googleusercontent.com/-mgiFawdM2hA/UrsqCSTXxiI/AAAAAAAABik/FQyr5EZ6OH8/s616/MP4-1.png" alt="alt tag"></p>
+
+<ul>
+<li>C1 fails</li>
+<li>C4 detects that C1 was in its replica group. C4 selects C3 as a new replica and copies K4 to C3</li>
+<li>C3 detects that C1 was in its replica group. C3 selects C2 as a new replica and copies K3 to C2</li>
+<li>C2 detects that its predecessor C1 has died. For C1’s keys K1, it becomes coordinator and replicates K1 to new replica C4</li>
+</ul><p>Following figure shows a scenario when a new machine C5 joins and the actions taken by other machines
+  <img src="https://lh4.googleusercontent.com/-dfQgnviDNbY/UrsqDHv0hnI/AAAAAAAABi4/vW5AN_ftMVQ/s610/MP4-2.png" alt="alt tag"></p>
+
+<ul>
+<li>C5 joins</li>
+<li>C1 detects that C5 is its successor. C1 selects C5 as a new replica. It copies K1 to C5 and deletes K1 from C3</li>
+<li>C4 detects that C5 is its second successor. C4 selects C5 as a new replica. It copies K4 to C5 and deletes K4 from C2</li>
+<li>C2 detects that its C5 is the new predecessor. For C2’s keys K1, C5 becomes new coordinator. C2 sends K2 to C5 and deletes K2 from C4</li>
+</ul><h2>
+<a name="concurrency" class="anchor" href="#concurrency"><span class="octicon octicon-link"></span></a>Concurrency</h2>
+
+<ul>
+<li>If the consistency level is ONE, coordinator processes that request locally</li>
+<li>If the consistency level is ALL, coordinator processes that request locally as well as on both its replicas</li>
+<li>If the consistency level is QUORUM, coordinator processes that request locally and its first replica</li>
+<li>coordinator stamps each request with time-stamp equal to when that request was received at coordinator</li>
+<li>coordinator runs a background thread which applies the updates corresponding to ONE and QUORUM requests on the replicas asynchronously. This guarantees eventual consistency and ensures that Last Writer Wins (LWW) property holds</li>
+</ul><h2>
+<a name="membership-protocol" class="anchor" href="#membership-protocol"><span class="octicon octicon-link"></span></a>Membership Protocol</h2>
+
+<p>Each host runs a Failure Detector process. This implements a gossip based membership protocol which is used to keep track of live hosts in the system. Gossip based protocol is very scalable for large number of machines. For n nodes, each node needs to transmit only log(n) gossip messages. So this is a very bandwidth efficient and fault tolerant scheme.</p>
+
+<h2>
+<a name="distributed-grep" class="anchor" href="#distributed-grep"><span class="octicon octicon-link"></span></a>Distributed Grep</h2>
+
+<p>Debugging distributed applications can be very tricky and therefore I developed a distributed Grep tool that can be used to grep the logs of multiple Key Value servers from a single machine - </p>
+
+<ul>
+<li>Each host will have a FAILURE MONITOR process running. This process implements a Gossip style Membership algorithm and keeps track of live nodes that are part of Distributed System. Gossip Protocol scales very nicely as the number of machines in the system increases and is robust against process failures. For N hosts, each host receives gossip in log(N) time. </li>
+<li>GREP SERVER process running on each machine is responsible for handling Grep Requests for log files residing that host.</li>
+<li>GREP CLIENT is a grep like command line utility which user uses to search for patterns. It sends the pattern to each host that is part of system and displays the results from all hosts to the user.</li>
+<li>Messages are compressed using Google Protocol Buffers library before sending over the network. For frequently occurring patterns in large files, this will result in faster message delivery and less network bandwidth usage.</li>
+<li>Grep Server is a multi-threaded process and can process multiple grep requests concurrently.</li>
+<li>Grep Client is a multi-threaded process and can query multiple Grep Servers simultaneously. </li>
+</ul><p>Following diagram illustrates the steps involved in processing a Grep command. The numbers on arrows indicate the order of events.</p>
+
+<p><img src="https://lh3.googleusercontent.com/-8KbAUPgxRpM/UrsqCUV-3sI/AAAAAAAABis/PKUdIPbpZDM/s811/MP1-new.png" alt="alt tag"></p>
+
+<h2>
+<a name="project-structure" class="anchor" href="#project-structure"><span class="octicon octicon-link"></span></a>Project Structure</h2>
+
+<h3>
+<a name="directory-organization" class="anchor" href="#directory-organization"><span class="octicon octicon-link"></span></a>Directory Organization</h3>
+
+<pre><code>Helium            - Base Directory  
+Helium/src      - Source Code  
+Helium/lib      - Jar files of the dependencies and helium.jar (containing class files for Helium project)  
+Helium/config   - Configuration Files  
+Helium/logs     - Log files  
+Helium/scripts  - Scripts for starting the Key Value Server and Client  
+</code></pre>
+
+<h3>
+<a name="requirements" class="anchor" href="#requirements"><span class="octicon octicon-link"></span></a>Requirements</h3>
+
+<ul>
+<li>
+<a href="http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html">JDK version 1.6 or higher</a> </li>
+<li>
+<a href="http://ant.apache.org/bindownload.cgi">Ant Build tool</a> </li>
+</ul><h3>
+<a name="compiling-the-code" class="anchor" href="#compiling-the-code"><span class="octicon octicon-link"></span></a>Compiling the code</h3>
+
+<p>The following instructions will work fine for any Linux distribution</p>
+
+<ul>
+<li>Change to Helium directory. It contains the ant build file build.xml</li>
+</ul><pre><code>        $ cd Helium
+</code></pre>
+
+<ul>
+<li>Run the ant build tool</li>
+</ul><pre><code>        $ ant
+</code></pre>
+
+<p>This will compile the source code and create the output jar file helium.jar in lib folder. </p>
+
+<h3>
+<a name="configuration" class="anchor" href="#configuration"><span class="octicon octicon-link"></span></a>Configuration</h3>
+
+<p>config/app.config contains configuration parameters. Set the following parameters as per your test setup.</p>
+
+<ul>
+<li>
+<p>Set node_count to number of machines that you are adding to Distributed System. Please note that there is a space before and after = sign.</p>
+
+<pre><code>  node_count = 3
+</code></pre>
+</li>
+<li>
+<p>For each node, set its IP Address e.g. </p>
+
+<pre><code>     node.1.ip = 192.168.2.12
+</code></pre>
+</li>
+</ul><h3>
+<a name="running-the-code" class="anchor" href="#running-the-code"><span class="octicon octicon-link"></span></a>Running the code</h3>
+
+<p>scripts folder contains scripts for running the starting the HeliumServer and HeliumClient</p>
+
+<h3>
+<a name="heliumserver" class="anchor" href="#heliumserver"><span class="octicon octicon-link"></span></a>HeliumServer</h3>
+
+<ul>
+<li>Step 1 - Start the HeliumServer<br>
+</li>
+</ul><pre><code>    $ ./heliumserver.start.sh
+</code></pre>
+
+<p>This will start the HeliumServer and bring up a command line interface to interact with HeliumServer.</p>
+
+<ul>
+<li>Step 2 - Use command "show" to see the keys stored on this HeliumServer and current Members of the group.
+        Use command "history" to see the last ten Read/Write commands </li>
+</ul><h3>
+<a name="heliumclient" class="anchor" href="#heliumclient"><span class="octicon octicon-link"></span></a>HeliumClient</h3>
+
+<ul>
+<li>
+<p>Step 1 - Start with HeliumClientc</p>
+
+<pre><code>$ ./heliumclient.start.sh
+</code></pre>
+
+<p>This will start the HeliumClient and bring up a command line interface to perform different operations</p>
+</li>
+<li>
+<p>Step 2 - How to perform different operations</p>
+
+<ul>
+<li>
+<p>To insert a key 5 and value USA with consistency level ONE  </p>
+
+<pre><code>insert 5 USA ONE
+</code></pre>
+</li>
+<li>
+<p>To lookup a key with consistency level QUORUM  </p>
+
+<pre><code>lookup 5 QUORUM
+</code></pre>
+</li>
+<li>
+<p>To update the value of key 5 from USA to United States with consistency level ALL  </p>
+
+<pre><code>update 5 USA "United States" ALL
+</code></pre>
+</li>
+<li>
+<p>To delete the key 5 with consistency level ALL  </p>
+
+<pre><code>delete 5 ALL
+</code></pre>
+</li>
+</ul>
+</li>
+</ul>
+      </section>
+    </div>
+
+    
+  </body>
+</html>
